@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Communication avec socket.io !</title>
+        <style>
+          .box{
+            width: 50px;
+            height: 50px;
+            position: absolute;
+          }
+          #playeurOne{
+            background-color: green;
+          }
+          #playeurTwo{
+            background-color: wheat;
+            margin-left:150px;
+            margin-top:150px;
+          }
+          .map{
+            width: 800px;
+            height: 600px;
+            border: 1px solid black;
+          }
+        </style>
+    </head>
+
+    <body>
+        <h1>Communication avec socket.io !</h1>
+
+        <p><input type="button" value="Embêter le serveur" id="poke" /></p>
+        <div class="map">
+          <div id="playeurOne" class="box">
+              1
+          </div>
+          <div id="playeurTwo" class="box">
+              2
+          </div>
+        </div>
+        <div id="testPosition">000</div>
+        <ul>
+
+        </ul>
+
+
+        <script src="http://code.jquery.com/jquery-3.3.1.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+
+
+            var htmlInfoClients = ''
+
+
+            var socket = io.connect('http://localhost:8080');
+            var id = 0;
+            socket.on('message', function(message) {
+                console.log(message);
+            })
+            socket.on('auth', function(message) {
+              id = message;
+              console.log('Je suis le client '+id);
+            })
+            socket.on('clientPosition', function(client) {
+              //console.log(positionXPlayeurOne);
+              //$('#testPosition').text('Client '+client.id+' x:'+client.position.x+' y:'+client.position.y);
+            })
+            socket.on('gamePosition', function(clientList) {
+              // console.log(clientList);
+
+              htmlInfoClients = '';
+              $.each(clientList, function (index, value) {
+
+                if (value !== undefined && value !== null){
+                  htmlInfoClients += '<li>'+index+' x:'+value.x+' y:'+value.y+'</li>'
+                  if (index != id) {
+                    // $('#playeurTwo').offset().left = value.x;
+                    // $('#playeurTwo').offset().top = value.y;
+                    $('#playeurTwo').css('margin-left', value.x+'px');
+                    $('#playeurTwo').css('margin-top', value.y+'px');
+                  }
+                }
+                if( index == (clientList.length-1)) $('ul').html(htmlInfoClients);
+              });
+
+
+              // if ( id == 2 && clientList[1] !== null){
+              //   console.log('Je suis le joueur 2 qui capte le joueur 1 en position x: '+clientList[1].x);
+              // }else if ( id == 1 && clientList[2] !== null){
+              //   console.log('Je suis le joueur 1 qui capte le joueur 2 en position x: '+clientList[2].x);
+              // }
+              // console.log('recup les positions '.clientList[id].x);
+            })
+
+            //var pseudo = prompt('Quel est votre pseudo ?');
+            //socket.emit('petit_nouveau', pseudo);
+
+            $('#poke').click(function () {
+                socket.emit('message', 'Salut serveur, ça va ?');
+            })
+
+
+            var Keys = {
+                up: false,
+                down: false,
+                left: false,
+                right: false
+            };
+            window.onkeydown = function(e) {
+                var kc = e.keyCode;
+
+                if      (kc === 37) Keys.left = true;  // only one key per event
+                else if (kc === 38) Keys.up = true;    // so check exclusively
+                else if (kc === 39) Keys.right = true;
+                else if (kc === 40) Keys.down = true;
+                e.preventDefault();
+            };
+            window.onkeyup = function(e) {
+                var kc = e.keyCode;
+
+                if      (kc === 37) Keys.left = false;
+                else if (kc === 38) Keys.up = false;
+                else if (kc === 39) Keys.right = false;
+                else if (kc === 40) Keys.down = false;
+                e.preventDefault();
+            };
+
+
+
+            setInterval(function(){
+              var playeur = {
+                position: {
+                  x: ($('#playeurOne').offset().left-$('#playeurOne').parent().offset().left),
+                  y: ($('#playeurOne').offset().top-$('#playeurOne').parent().offset().top)
+                }
+              }
+              if( Keys.up) {
+                 $('#playeurOne').css('top', "-=8px");
+                 // console.log(playeur.position.x+ ', '+playeur.position.y);
+                 socket.emit('clientPosition', playeur.position);
+              }
+              if( Keys.down) {
+                // console.log(playeur.position.x+ ', '+playeur.position.y);
+                 $('#playeurOne').css('top', "+=8px");
+                 socket.emit('clientPosition', playeur.position)
+              }
+              if( Keys.left) {
+                // console.log(playeur.position.x+ ', '+playeur.position.y);
+                $('#playeurOne').css('left', "-=8px");
+                socket.emit('clientPosition', playeur.position)
+              }
+              if( Keys.right) {
+                // console.log(playeur.position.x+ ', '+playeur.position.y);
+                 $('#playeurOne').css('left', "+=8px");
+                 socket.emit('clientPosition', playeur.position)
+              }
+            },10);
+
+        </script>
+    </body>
+</html>

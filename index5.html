@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Jeux multi joueurs - essai de prototypage</title>
+        <link rel="stylesheet" href="http://127.0.0.1:5000/master.css">
+    </head>
+
+    <body>
+        <div class="map"></div>
+        <ul></ul>
+
+
+        <script src="http://code.jquery.com/jquery-3.3.1.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="http://127.0.0.1:5000/functions.js"></script>
+        <script>
+
+
+            var htmlInfoClients = ''
+
+
+            var socket = io.connect('http://localhost:8080');
+            var id = 0;
+            var stop = false;
+            socket.on('message', function(message) {
+                console.log(message);
+            })
+            socket.on('stopClient', function(value) {
+
+            })
+            socket.on('auth', function(message) {
+              id = message;
+              console.log('Je suis le client '+id);
+            })
+
+            socket.on('ajouteClientSurMap', function(node) {
+              console.log('Ajout du '+node.type+'  '+node.id+' sur la map');
+
+              var collider = '';
+              if ( node.collider === true ) collider = 'collider';
+
+              var trigger = '';
+              if ( node.trigger === true ) trigger = 'trigger';
+
+              if ( node.type == 'client' ){
+                $( ".map" ).append( '<div id="client_'+node.id+'" style="margin-left:'+node.x+'px;margin-top:'+node.y+'px;'+node.css+'" class="box client '+collider+'"></div>' );
+              }else if ( node.type == 'mapItem' ){
+                $( ".map" ).append( '<div id="mapItem_'+node.id+'" style="margin-left:'+node.x+'px;margin-top:'+node.y+'px;'+node.css+'" class="box mapItem '+collider+' '+trigger+'"></div>' );
+              }
+            })
+
+
+            socket.on('gamePosition', function(clientList) {
+              // console.log(clientList);
+              htmlInfoClients = '';
+              infosClients( clientList );
+
+              // $.each(clientList, function (index, value) {
+              //
+              //   if (value !== undefined && value !== null){
+              //     if (index != id) {
+              //       console.log(value.type);
+              //
+              //       if( value.type != 'mapItem'){
+              //         $('#client_'+index).css('margin-left', value.x+'px');
+              //         $('#client_'+index).css('margin-top', value.y+'px');
+              //       }
+              //
+              //     }
+              //   }
+              // });
+
+            })
+
+
+
+
+
+            var Keys = {
+                up: false,
+                down: false,
+                left: false,
+                right: false
+            };
+            window.onkeydown = function(e) {
+              var kc = e.keyCode;
+
+
+
+                if      (kc === 37) Keys.left = true;  // only one key per event
+                else if (kc === 38) Keys.up = true;    // so check exclusively
+                else if (kc === 39) Keys.right = true;
+                else if (kc === 40) Keys.down = true;
+                e.preventDefault();
+            };
+            window.onkeyup = function(e) {
+                var kc = e.keyCode;
+
+                if      (kc === 37) Keys.left = false;
+                else if (kc === 38) Keys.up = false;
+                else if (kc === 39) Keys.right = false;
+                else if (kc === 40) Keys.down = false;
+                e.preventDefault();
+            };
+
+
+
+            setInterval(function(){
+              // si le client a bien ete ajouter a la map alors on peux le déplacer
+              if (ifClientExist() ) {
+                // deplace le client a partir du client lui meme (en px)
+                moveClient(1);
+                // envoi du json vers le serveur par l'evenement clientPosition
+                sendNewPosClient();
+              }
+            },10);
+
+        </script>
+    </body>
+</html>

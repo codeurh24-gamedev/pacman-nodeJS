@@ -1,0 +1,38 @@
+body, html{
+  padding: 0;
+  margin: 0;
+  /* background-image: url(http://127.0.0.1:5000/image/bbman-mur-gris.png); */
+  background-color: black;
+}
+.box{
+  width: 50px;
+  height: 50px;
+  position: absolute;
+  background-size: cover;
+}
+.map{
+  margin-left: 0px;
+  margin-top: 100px;
+  width: 800px;
+  height: 600px;
+  /* border: 1px solid black; */
+}
+.collider{
+  /* border: 1px solid #0F0; */
+}
+.map{
+  background-color: #0A0;
+}
+
+.pacman{
+  background-image: url(http://127.0.0.1:5000/image/frame-pacman-jaune.png);
+  background-position: 0% 0px;
+  background-repeat: no-repeat;
+  background-size: 416% 100%;
+  transition-property: background-position;
+  transition-duration: 0.06s;
+  transition-timing-function: steps(3, end);
+}
+.anim-pacman{
+  background-position: 100% 0px;
+}

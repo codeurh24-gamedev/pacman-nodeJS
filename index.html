@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Jeux multi joueurs - essai de prototypage</title>
+        <link rel="stylesheet" href="http://127.0.0.1:5000/master.css">
+    </head>
+
+    <body>
+        <div class="debug" style="color:white"></div>
+        <div class="map"></div>
+        <div class="scores"></div>
+        <div class="testframe"></div>
+
+
+        <script src="http://code.jquery.com/jquery-3.3.1.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="http://127.0.0.1:5000/functions.js"></script>
+        <script>
+            var socket = io.connect('http://localhost:8080');
+            var id = 0;
+            var speed = 1;
+            var maMatrice = [];
+
+            var delaiInterval = 10;
+
+            socket.on('auth', function(message) {
+              id = message;
+              console.log('Je suis le client '+id);
+            })
+            socket.on('matrice', function(matrice) {
+              maMatrice = matrice;
+            })
+            socket.on('newNode', function(data) {
+              $( ".map" ).append( '<div id="'+data.id+'" style="margin-left:'+data.x+'px;margin-top:'+data.y+'px;width:'+data.w+'px;height:'+data.h+'px;transform:'+data.rotate+';'+data.css+'" class="'+data.classe+'"></div>' );
+              // console.log(data.id+' ajouté sur la map');
+            })
+
+            socket.on('disconnect', function () {
+              window.location.reload(true);
+            });
+            socket.on('deleteNode', function (data) {
+              //console.log('client '+id+' supprime '+data.id);
+              $( '#'+data.id ).remove();
+              if ( $( '#'+data.id ).length != 0 ){
+                $( '#'+data.id ).remove();
+              }
+              if ( $( '#'+data.id ).length != 0 ){
+                $( '#'+data.id ).remove();
+              }
+              if ( $( '#'+data.id ).length != 0 ){
+                $( '#'+data.id ).remove();
+              }
+              if ( $( '#'+data.id ).length != 0 ){
+                $( '#'+data.id ).remove();
+              }
+            });
+            socket.on('updatePosition', function (data) {
+              $('#'+data.id).css('margin-left', data.position.x+'px');
+              $('#'+data.id).css('margin-top', data.position.y+'px');
+              $('#'+data.id).css('transform', data.rotate);
+            });
+
+
+
+
+            var Keys = {
+                up: false,
+                down: false,
+                left: false,
+                right: false
+            };
+            window.onkeydown = function(e) {
+              var kc = e.keyCode;
+
+
+
+                if      (kc === 37) Keys.left = true;  // only one key per event
+                else if (kc === 38) Keys.up = true;    // so check exclusively
+                else if (kc === 39) Keys.right = true;
+                else if (kc === 40) Keys.down = true;
+                else if (kc === 13) Keys.enter = true;
+                e.preventDefault();
+            };
+            window.onkeyup = function(e) {
+                var kc = e.keyCode;
+
+                if      (kc === 37) Keys.left = false;
+                else if (kc === 38) Keys.up = false;
+                else if (kc === 39) Keys.right = false;
+                else if (kc === 40) Keys.down = false;
+                else if (kc === 13) Keys.enter = false;
+                e.preventDefault();
+            };
+
+
+            var client = {
+              position: {
+                x:0,
+                y:0
+              },
+              rotate: 0
+            }
+            var x1;
+            var y1;
+            var w1;
+            var h1;
+            var x2;
+            var y2;
+            var w2;
+            var h2;
+            var collisionX;
+            var collisionY;
+            var margin=0;
+
+            var IA_posX = parseInt($('#client_'+id).css('margin-left'));
+            var IA_posY = parseInt($('#client_'+id).css('margin-top'));
+
+            var margin = 0;
+            var sens =0;
+            var enCollision = false;
+            var randSens = 0;
+            var lastKey;
+            var positionMatrice = {x:0,y:0,i:0,y:0};
+            var jePeuxUP = 0;
+            var jePeuxDOWN = 0;
+            var jePeuxLEFT = 0;
+            var jePeuxRIGHT = 0;
+            var memoPositionMatrice = {};
+            var jeDecide = false;
+            var randomKey = 0;
+            var compteurSiBloquer = 0;
+
+
+
+            var intervalID = setInterval(function(){
+
+
+
+              // si le client a bien ete ajouter a la map alors on peux le déplacer
+              if (ifClientExist() ) {
+
+                if( id == -1 ){
+                  if( sens == 0 ) Keys.right = true;
+
+                  enCollision = isCollide(margin);
+
+                  positionMatrice.x = parseInt($('#client_'+id).css('margin-left'));
+                  positionMatrice.y = parseInt($('#client_'+id).css('margin-top'));
+                  positionMatrice.i = parseInt(positionMatrice.x/50);
+                  positionMatrice.j = parseInt(positionMatrice.y/50);
+
+                  if ((positionMatrice.j-1) > 0 && maMatrice[positionMatrice.j-1][positionMatrice.i] != 1 && (memoPositionMatrice.i != positionMatrice.i || memoPositionMatrice.j != positionMatrice.j)){
+                    jeVaisUP = rand(0, 1);
+                    console.log('Je suis en '+positionMatrice.j+', '+positionMatrice.i);
+                    if( jeVaisUP == 1 ){
+                      Keys.up = true;
+                      Keys.left = false;
+                      Keys.down = false;
+                      Keys.right = false;
+                      sens = 3;
+                      memoPositionMatrice.i = positionMatrice.i;
+                      memoPositionMatrice.j = positionMatrice.j;
+                    }
+                  }
+
+                  if (enCollision !== false) {
+                    // console.log(enCollision);
+                    if( Keys.right){
+                      sens = 1;
+                      $('#client_'+id).css('transform', 'rotate(180deg)');
+                      $('#client_'+id).css('margin-left', '-='+speed+'px');
+                    }else if( Keys.left){
+                      sens = 2;
+                      $('#client_'+id).css('transform', 'rotate(0deg)');
+                      $('#client_'+id).css('margin-left', '+='+speed+'px');
+                    }else if( Keys.up){
+                      sens = 3;
+                      $('#client_'+id).css('transform', 'rotate(90deg)');
+                      $('#client_'+id).css('margin-top', '+='+speed+'px');
+                    }else if( Keys.down){
+                      sens = 4;
+                      $('#client_'+id).css('transform', 'rotate(-90deg)');
+                      $('#client_'+id).css('margin-top', '-='+speed+'px');
+                    }
+                    Keys.right = false;
+                    Keys.left = false;
+                    Keys.up = false;
+                    Keys.down = false;
+                    while (randSens == sens || randSens == 0) {
+                      randSens = rand(1, 4);
+                      console.log(randSens+ ' soit '+(randSens == sens || randSens == 0));
+                    }
+                    sens = randSens;
+                    if(sens == 1){
+                      Keys.right = true;
+                    }else if(sens == 2){
+                      Keys.left = true;
+                    }else if(sens == 3){
+                      Keys.up = true;
+                    }else if(sens == 4){
+                      Keys.down = true;
+                    }
+                  }
+
+                }
+
+                if( id == 1 && Keys.enter == false ){
+                  compteurSiBloquer++;
+                  // if( Keys.up === false  && Keys.down === false  && Keys.left === false  && Keys.right === false ) Keys.right = true;
+
+                  positionMatrice.x = parseInt($('#client_'+id).css('margin-left'));
+                  positionMatrice.y = parseInt($('#client_'+id).css('margin-top'));
+                  positionMatrice.i = parseInt(positionMatrice.x/50);
+                  positionMatrice.j = parseInt(positionMatrice.y/50);
+                  if( Keys.left === true){
+                    positionMatrice.x = parseInt($('#client_'+id).css('margin-left'))+49;
+                    positionMatrice.y = parseInt($('#client_'+id).css('margin-top'));
+                    positionMatrice.i = parseInt(positionMatrice.x/50);
+                    positionMatrice.j = parseInt(positionMatrice.y/50);
+                  }
+                  if( Keys.up === true){
+                    positionMatrice.x = parseInt($('#client_'+id).css('margin-left'));
+                    positionMatrice.y = parseInt($('#client_'+id).css('margin-top'))+49;
+                    positionMatrice.i = parseInt(positionMatrice.x/50);
+                    positionMatrice.j = parseInt(positionMatrice.y/50);
+                  }
+
+                  if(memoPositionMatrice.i != positionMatrice.i || memoPositionMatrice.j != positionMatrice.j && (positionMatrice.j>0) || compteurSiBloquer > 1000 ){
+                    console.log('Je suis en '+positionMatrice.j+', '+positionMatrice.i);
+                    jePeuxUP = false;
+                    jePeuxDOWN = false;
+                    jePeuxLEFT = false;
+                    jePeuxRIGHT = false;
+                    if( maMatrice[positionMatrice.j-1][positionMatrice.i] != 1 && Keys.up === false ){
+                      jePeuxUP = true;
+                    }
+                    if( maMatrice[positionMatrice.j+1][positionMatrice.i] != 1 && Keys.down === false ){
+                      jePeuxDOWN = true;
+                    }
+                    if( maMatrice[positionMatrice.j][positionMatrice.i-1] != 1 && Keys.left === false ){
+                      jePeuxLEFT = true;
+                    }
+                    if( maMatrice[positionMatrice.j][positionMatrice.i+1] != 1 && Keys.right === false ){
+                      jePeuxRIGHT = true;
+                    }
+
+
+
+                    if( maMatrice[positionMatrice.j][positionMatrice.i+1] == 1 && Keys.right === true ){
+                      randomKey = 10;
+                    }else if( maMatrice[positionMatrice.j][positionMatrice.i-1] == 1 && Keys.left === true ){
+                      randomKey = 10;
+                    }else if( maMatrice[positionMatrice.j-1][positionMatrice.i] == 1 && Keys.up === true ){
+                      randomKey = 10;
+                    }else if( maMatrice[positionMatrice.j+1][positionMatrice.i] == 1 && Keys.down === true ){
+                      randomKey = 10;
+                    }else{
+                      randomKey = rand(0, 10);
+                    }
+
+
+
+
+                    if(randomKey > 4){
+
+                      console.log('Je peux up:'+jePeuxUP+' down:'+jePeuxDOWN+' left:'+jePeuxLEFT+' right:'+jePeuxRIGHT);
+                      var choixDirection = [];
+                      var choixDirectionID = -1;
+                      if( (jePeuxUP && Keys.down === false) || (jePeuxUP && Keys.down === true && jePeuxDOWN === false && jePeuxLEFT === false && jePeuxRIGHT === false ) ){
+                        choixDirectionID++;
+                        choixDirection[choixDirectionID] = function(){
+                          Keys.up = false;
+                          Keys.left = false;
+                          Keys.down = false;
+                          Keys.right = false;
+
+                          Keys.up = true;
+                          console.log('up '+Keys.up+' x:'+positionMatrice.x+' y:'+positionMatrice.y );
+                        }
+                      }
+                      if((jePeuxDOWN && Keys.up === false) || (jePeuxDOWN && Keys.up === true && jePeuxUP === false && jePeuxLEFT === false && jePeuxRIGHT === false )){
+                        choixDirectionID++;
+                        choixDirection[choixDirectionID] = function(){
+                          Keys.up = false;
+                          Keys.left = false;
+                          Keys.down = false;
+                          Keys.right = false;
+
+                          Keys.down = true;
+                          console.log('down '+Keys.down+' x:'+positionMatrice.x+' y:'+positionMatrice.y );
+                        }
+                      }
+                      if((jePeuxLEFT && Keys.right === false) || (jePeuxLEFT && Keys.right === true && jePeuxUP === false && jePeuxDOWN === false && jePeuxRIGHT === false) ){
+                        choixDirectionID++;
+                        choixDirection[choixDirectionID] = function(){
+                          Keys.up = false;
+                          Keys.left = false;
+                          Keys.down = false;
+                          Keys.right = false;
+
+                          Keys.left = true;
+                          console.log('left '+Keys.left+' x:'+positionMatrice.x+' y:'+positionMatrice.y );
+                        }
+                      }
+                      if((jePeuxRIGHT && Keys.left === false)  || (jePeuxRIGHT && Keys.left === true && jePeuxUP === false && jePeuxDOWN === false && jePeuxLEFT === false) ){
+                        choixDirectionID++;
+                        choixDirection[choixDirectionID] = function(){
+                          Keys.up = false;
+                          Keys.left = false;
+                          Keys.down = false;
+                          Keys.right = false;
+
+                          Keys.right = true;
+                          console.log('right '+Keys.left+' x:'+positionMatrice.x+' y:'+positionMatrice.y );
+                        }
+                      }
+                      var nChoixDirection = choixDirection.length;
+                      console.log(nChoixDirection)
+                      choixDirection[rand(0, nChoixDirection-1)]();
+                      // if(jePeuxUP && Keys.down === false){
+                      //   Keys.up = false;
+                      //   Keys.left = false;
+                      //   Keys.down = false;
+                      //   Keys.right = false;
+                      //
+                      //   Keys.up = true;
+                      //   console.log('up '+Keys.up+' x:'+positionMatrice.x+' y:'+positionMatrice.y );
+                      // }else if(jePeuxDOWN && Keys.up === false){
+                      //   Keys.up = false;
+                      //   Keys.left = false;
+                      //   Keys.down = false;
+                      //   Keys.right = false;
+                      //
+                      //   Keys.down = true;
+                      //   console.log('down '+Keys.down+' x:'+positionMatrice.x+' y:'+positionMatrice.y );
+                      // } else if(jePeuxLEFT && Keys.right === false){
+                      //   Keys.up = false;
+                      //   Keys.left = false;
+                      //   Keys.down = false;
+                      //   Keys.right = false;
+                      //
+                      //   Keys.left = true;
+                      //   console.log('left '+Keys.left+' x:'+positionMatrice.x+' y:'+positionMatrice.y );
+                      // } else if(jePeuxRIGHT && Keys.left === false){
+                      //   Keys.up = false;
+                      //   Keys.left = false;
+                      //   Keys.down = false;
+                      //   Keys.right = false;
+                      //
+                      //   Keys.right = true;
+                      //   console.log('right '+Keys.right+' x:'+positionMatrice.x+' y:'+positionMatrice.y );
+                      // }
+                    }else{
+                      console.log('Je ne decide pas '+randomKey);
+                    }
+                    compteurSiBloquer = 0
+                    memoPositionMatrice.i = positionMatrice.i;
+                    memoPositionMatrice.j = positionMatrice.j;
+                  }
+                  if( maMatrice[positionMatrice.j][positionMatrice.i+1] == 1 && Keys.right === true ){
+                    memoPositionMatrice.i = -1;
+                    memoPositionMatrice.j = -1;
+                  }
+                  $('.debug').text('up:'+Keys.up+' down:'+Keys.down+' left:'+Keys.left+' right:'+Keys.right);
+                }
+
+
+
+                // deplace le client a partir du client lui meme (en px)
+                // console.log(isCollide(margin));
+                if( Keys.up ) {
+                  if (isCollide(margin).y != 'up' ){
+                    $('#client_'+id).css('transform', 'rotate(-90deg)');
+                    $('#client_'+id).css('margin-top', '-='+speed+'px');
+                    lastKey = 'up';
+                  }else{
+                    Keys.up = false;
+                    $('#client_'+id).css('margin-top', '+='+speed+'px');
+                  }
+
+                }
+                if( Keys.down) {
+                  if (isCollide(margin).y != 'down' ){
+                    $('#client_'+id).css('transform', 'rotate(90deg)');
+                    $('#client_'+id).css('margin-top', '+='+speed+'px');
+                    lastKey = 'down';
+                  }else{
+                    Keys.down = false;
+                    $('#client_'+id).css('margin-top', '-='+speed+'px');
+                  }
+                }
+
+                if( Keys.left) {
+                  if (isCollide(margin).x != 'left'  ){
+                    $('#client_'+id).css('transform', 'rotate(180deg)');
+                    $('#client_'+id).css('margin-left', '-='+speed+'px');
+                    lastKey = 'left';
+                  }else{
+                    Keys.left = false;
+                    $('#client_'+id).css('margin-left', '+='+speed+'px');
+                  }
+                }
+
+                if( Keys.right) {
+                  if (isCollide(margin).x != 'right' ){
+                    $('#client_'+id).css('transform', 'rotate(0deg)');
+                    $('#client_'+id).css('margin-left', '+='+speed+'px');
+                    lastKey = 'right';
+                  }else{
+                    Keys.right = false;
+                    $('#client_'+id).css('margin-left', '-='+speed+'px');
+                  }
+                }
+
+
+
+                if( Keys.up || Keys.down|| Keys.left|| Keys.right ){
+                    x1 = parseInt($( '#client_'+id ).css('margin-left'));
+                    y1 = parseInt($( '#client_'+id ).css('margin-top'));
+                    w1 = parseInt($( '#client_'+id ).css('width'));
+                    h1 = parseInt($( '#client_'+id ).css('height'));
+
+                    $('.trigger').each(function( index ) {
+
+                        x2 = parseInt($( this ).css('margin-left'));
+                        y2 = parseInt($( this ).css('margin-top'));
+                        w2 = parseInt($( this ).css('width'));
+                        h2 = parseInt($( this ).css('height'));
+                        collisionX  = ((x1+(w1+margin)) > x2 &&  x1 < (x2+(w2+margin)));
+                        collisionY  = ((y1+(h1+margin)) > y2 &&  y1 < (y2+(h2+margin)));
+                        if( collisionX && collisionY){
+                          if( $( this ).attr('id') != 'client_'+id  ){
+                            socket.emit('deleteNode', {id:$(this).attr('id'), fromID:id});
+                          }
+
+                        }
+                    });
+
+
+                  client.position.x =  parseInt($('#client_'+id).css('margin-left'));
+                  client.position.y =  parseInt($('#client_'+id).css('margin-top'));
+                  client.rotate = $('#client_'+id).css('transform') ;
+                  socket.emit('maNouvellePosition', {id:id, position:client.position, rotate:client.rotate});
+                }
+
+
+              }
+
+            },delaiInterval);
+
+            // setInterval(function(){ $('.pacman').toggleClass("anim-pacman"); }, 120);
+            var etatPacmanAnimation = false;
+            setInterval(function(){
+              if( etatPacmanAnimation ){
+                $('.pacman').css( 'background-position', '0% 0px' );
+              }else{
+                $('.pacman').css( 'background-position', '100% 0px' );
+              }
+              etatPacmanAnimation = !etatPacmanAnimation;
+            }, 120);
+
+        </script>
+    </body>
+</html>
